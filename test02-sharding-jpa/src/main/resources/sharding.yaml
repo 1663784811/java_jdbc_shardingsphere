@@ -1,0 +1,53 @@
+mode:
+  type: Standalone
+  repository:
+    type: JDBC # 持久化仓库类型
+#    props: # 持久化仓库所需属性
+#      foo_key: foo_value
+#      bar_key: bar_value
+
+dataSources:
+  master:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://192.168.118.8:3306/master_01?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&useTimezone=true
+    username: root
+    password: 123456
+  slave01:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://192.168.118.8:3306/slave_01?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&useTimezone=true
+    username: root
+    password: 123456
+  slave02:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://192.168.118.8:3306/slave_02?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&useTimezone=true
+    username: root
+    password: 123456
+
+
+rules:
+  - !SINGLE
+    tables:
+      - "*.*"
+    defaultDataSource: master
+  - !READWRITE_SPLITTING
+    dataSources:
+      readwrite_ds:
+        writeDataSourceName: master
+        readDataSourceNames:
+          - slave01
+          - slave02
+        # 事务内读请求的路由策略，可选值：
+        # PRIMARY（路由至主库）、
+        # FIXED（同一事务内路由至固定数据源）、
+        # DYNAMIC（同一事务内路由至非固定数据源）。
+        # 默认值：DYNAMIC
+        transactionalReadQueryStrategy: FIXED
+        loadBalancerName: random
+    loadBalancers:
+      random:
+        type: RANDOM
+props:
+  sql-show: true
