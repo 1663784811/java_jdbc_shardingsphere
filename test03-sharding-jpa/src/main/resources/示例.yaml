@@ -1,0 +1,92 @@
+dataSources:
+  master_0:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://192.168.118.8:3306/master_0?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&useTimezone=true
+    username: root
+    password: 123456
+  master_1:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://192.168.118.8:3306/master_1?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&useTimezone=true
+    username: root
+    password: 123456
+  master_2:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://192.168.118.8:3306/master_2?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&useTimezone=true
+    username: root
+    password: 123456
+
+rules:
+- !SHARDING
+  tables:
+    t_user:                                                 #  逻辑表名称
+      actualDataNodes: master_${0..2}.t_user_${0..9}        #  真实数据节点
+      databaseStrategy:                                     # 分库策略，缺省表示使用默认分库策略，以下的分片策略只能选其一
+        standard:                                           # 用于单分片键的标准分片场景
+          shardingColumn: id                                # 分片列名称
+          shardingAlgorithmName: database_inline            # 分片算法名称
+#        complex:                                            # 用于多分片键的复合分片场景
+#          shardingColumns:                                  # 分片列名称，多个列以逗号分隔
+#          shardingAlgorithmName:                            # 分片算法名称
+#        hint:                                               # Hint 分片策略
+#          shardingAlgorithmName:                            # 分片算法名称
+#        none: # 不分片
+      tableStrategy:                                        # 分表策略，同分库策略
+        standard:
+          shardingColumn: id
+          shardingAlgorithmName: t_user_inline
+      keyGenerateStrategy:                                  # 主键生成策略
+        column: id                                          # 自增列名称，缺省表示不使用自增主键生成器
+        keyGeneratorName: snowflake                         # 分布式序列算法名称
+#      auditStrategy:                                        # 分片审计策略  审计DML语句，确保它们包含分片键,防止不带分片键的 DML 语句执行，避免全表扫描导致性能下降。允许使用 SQL Hint 来临时禁用审计
+#        auditorNames:                                       # 分片审计算法名称
+#          - sharding_key_required_auditor
+#        allowHintDisable: true                              # 是否禁用分片审计hint
+    t_order:
+      actualDataNodes: master_${0..2}.t_order_${0..7}
+      tableStrategy:
+        standard:
+          shardingColumn: id
+          shardingAlgorithmName: t_order_inline
+  ################################################        分片算法       #############################################
+  shardingAlgorithms:                               # 分片算法
+    database_inline:                                # 分片算法名称
+      type: INLINE                                  # 使用行表达式的分片算法
+      props:
+        algorithm-expression: master_${id % 3}      # id 对 3 取模，决定存入 master_0 、master_1 还是 master_2 数据库
+    t_user_inline:
+      type: INLINE
+      props:
+        algorithm-expression: t_user_${id % 10}       # id 对 10 取模，决定存入 t_user_0 ... 还是 t_user_9 数据库
+    t_order_inline:
+      type: INLINE
+      props:
+        algorithm-expression: t_order_${id % 8} # id 对 8 取模，决定存入 t_order_0 ... 还是 t_order_7 数据库
+  keyGenerators:                                  # 主键生成器
+    snowflake:                                    # 分布式序列算法名称
+      type: SNOWFLAKE                             # SNOWFLAKE：使用 Twitter 雪花算法 生成分布式唯一 ID
+  ################################################       审计器    ##############################################
+  auditors:                                       # 审计器
+    sharding_key_required_auditor:                # 分片审计算法名称
+      type: DML_SHARDING_CONDITIONS               # 分片审计算法类型
+      props:                                      # 分片审计算法属性配置
+  ##################################################     默认操作      ###############################################
+  defaultShardingColumn: id               # 默认分片键
+  defaultDatabaseStrategy:                        # 默认库分片策略
+    standard:
+      shardingColumn: id
+      shardingAlgorithmName: database_inline
+#    none:
+#  defaultTableStrategy:                           # 默认表分片策略
+#    standard:
+#      shardingColumn: id
+#      shardingAlgorithmName:
+#    none:
+  defaultKeyGenerateStrategy: # 默认的分布式序列策略
+    column: id
+    keyGeneratorName: snowflake
+
+props:
+  sql-show: true
